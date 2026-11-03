@@ -1,0 +1,7 @@
+.DS_Store
+.venv
+__pycache__
+.pytest_cache
+.ruff_cache
+# The export's output: the index and the image cache, regenerated from the archives.
+cache/
