@@ -5,3 +5,6 @@ __pycache__
 .ruff_cache
 # The export's output: the index and the image cache, regenerated from the archives.
 cache/
+# Models and metrics of the training command.
+runs/
+node_modules/

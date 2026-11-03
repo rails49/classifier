@@ -69,9 +69,9 @@ def test_positions_within_1_5_g_of_another_track_are_left_out():
 
     positions, left_out = label_positions([a, b], [], G, SIZE)
 
-    # A's position at x 140 is 1.41 G from B's first node; x 130 is 2.24 G.
-    assert [round(p.x) for p in positions] == [100, 110, 120, 130]
-    assert left_out.near_track == 7 + 6
+    # B comes within 1.5 G of A from x 139; a patch at x 110 reaches 3 G along to x 140.
+    assert [round(p.x) for p in positions] == [100]
+    assert left_out.near_track == 10 + 6
 
 
 def test_regions_inside_a_train_near_its_ends_beside_an_occupied_track_and_elsewhere():
@@ -102,3 +102,85 @@ def test_positions_outside_the_image_are_left_out():
 
     assert [round(p.x) for p in positions] == [0, 10, 20, 30, 40, 50]
     assert left_out.outside == 3
+
+
+def test_along_track_distance_to_the_nearest_car_span_ahead_and_behind():
+    # The car spans x 133..167; the track runs toward +x, so ahead is +x.
+    positions, _ = label_positions(
+        [straight(100, 150, 200, 150)], [car("a", 133, 153, 167, 153)], G, SIZE
+    )
+
+    by_x = {round(p.x): (p.ahead_g, p.behind_g) for p in positions}
+    assert by_x[100] == (pytest.approx(3.3, abs=0.01), None)
+    assert by_x[120] == (pytest.approx(1.3, abs=0.01), None)
+    assert by_x[150] == (0, 0)
+    assert by_x[200] == (None, pytest.approx(3.3, abs=0.01))
+
+
+def test_no_car_on_the_track_leaves_both_distances_blank():
+    a = straight(100, 150, 200, 150)
+    b = straight(100, 250, 200, 250)
+
+    positions, _ = label_positions([a, b], [car("b", 133, 250, 167, 250)], G, SIZE)
+
+    assert all(p.ahead_g is None and p.behind_g is None for p in positions if p.y == 150)
+
+
+def test_a_car_end_nearer_another_pass_of_its_own_track_stays_on_the_car_s_pass():
+    # A hairpin: the track runs right along y 100, turns, and runs back along y 110,
+    # as a helix does in the image. The car stands on the y 110 pass; its right end
+    # is labeled nearer the y 100 pass.
+    hairpin = Track(
+        nodes=[
+            TrackNode(x=50, y=100, heading=0),
+            TrackNode(x=350, y=100, heading=0),
+            TrackNode(x=350, y=110, heading=math.pi),
+            TrackNode(x=50, y=110, heading=math.pi),
+        ]
+    )
+
+    positions, _ = label_positions([hairpin], [car("a", 100, 110, 180, 104)], G, SIZE)
+
+    occupied = {(round(p.x), round(p.y)) for p in positions if p.label == "occupied"}
+    assert all(y > 105 for _, y in occupied)
+    assert min(x for x, _ in occupied) <= 100 and max(x for x, _ in occupied) >= 180
+
+
+def test_positions_whose_patch_reaches_a_turnout_are_left_out():
+    # B leaves A at x 150 and diverges; it is within 1.5 G of A from x 135 to 212.
+    # A patch reaches 3 G along the track, so positions on A from x 105 to 242 show it.
+    a = straight(0, 150, 390, 150)
+    b = straight(150, 150, 390, 210)
+
+    positions, _ = label_positions([a, b], [], G, SIZE)
+
+    on_a = {round(p.x) for p in positions if p.y == pytest.approx(150)}
+    assert {100, 250} <= on_a
+    assert not on_a & {110, 240}
+
+
+def test_a_car_across_a_turnout_covers_a_track_only_while_the_track_stays_under_it():
+    # B leaves A at x 100 and climbs 1 in 4. The car stands from x 60 on A to x 220 on
+    # B. A runs more than 1.5 G from the car's straight line beyond x 141.
+    a = straight(0, 150, 390, 150)
+    b = straight(100, 150, 390, 222.5)
+
+    positions, _ = label_positions([a, b], [car("a", 60, 150, 220, 180)], G, SIZE)
+
+    on_a = {round(p.x): p.label for p in positions if p.y == pytest.approx(150)}
+    on_b = {round(p.x): p.label for p in positions if p.y > 150}
+    assert {x: on_a[x] for x in (200, 210, 220)} == dict.fromkeys((200, 210, 220), "clear")
+    assert any(label == "occupied" for x, label in on_b.items() if 195 < x < 225)
+
+
+def test_a_car_whose_ends_lie_on_two_tracks_covers_both():
+    # A and B meet end to end at x 200; the car stands across the join from x 150 to 250.
+    a = straight(0, 150, 200, 150)
+    b = straight(200, 150, 390, 150)
+
+    positions, _ = label_positions([a, b], [car("a", 150, 150, 250, 150)], G, SIZE)
+
+    labels = {round(p.x): p.label for p in positions if p.x > 245}
+    # x 270 is 2 G beyond the car's end; x 280 is 3 G.
+    assert labels[250] == labels[260] == labels[270] == "occupied"
+    assert labels[280] == "clear"

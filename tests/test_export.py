@@ -13,14 +13,14 @@ from classifier.export import export
 DPT = 17.9375
 
 
-def write_archive(path: Path, px_per_mm: float = 2) -> None:
+def write_archive(path: Path, px_per_mm: float = 2, p1_y: float = 100) -> None:
     jpeg = io.BytesIO()
     Image.new("RGB", (400, 200), "gray").save(jpeg, "JPEG")
     car = {
         "id": "c",
         "class": "stock",
         "p0": {"x": 100, "y": 100},
-        "p1": {"x": 300, "y": 100},
+        "p1": {"x": 300, "y": p1_y},
         "provenance": "human",
     }
     manifest = {
@@ -77,6 +77,9 @@ def test_export_writes_the_index_the_counts_and_the_image_cache(tmp_path: Path):
     assert float(by_x[0]["heading"]) == pytest.approx(0)
     assert float(by_x[0]["dpt"]) == pytest.approx(DPT)
     assert float(by_x[0]["center_g"]) == pytest.approx(200 / DPT, abs=0.01)
+    assert float(by_x[0]["ahead_g"]) == pytest.approx(100 / DPT, abs=0.01)
+    assert by_x[0]["behind_g"] == ""
+    assert (by_x[11]["ahead_g"], by_x[11]["behind_g"]) == ("0.00", "0.00")
 
     counts = json.loads((out / "counts.json").read_text())
     assert counts == {
@@ -108,3 +111,11 @@ def test_a_cached_image_is_resampled_again_when_its_archive_dpt_changes(tmp_path
 
     with Image.open(out / "dpt8.96875" / "layout" / "done.png") as cached:
         assert cached.size == (100, 50)
+
+
+def test_the_export_stops_on_a_car_end_more_than_0_3_g_from_every_track(tmp_path: Path):
+    archive = tmp_path / "layout.r49"
+    write_archive(archive, p1_y=110)  # 10 px is 0.56 G off the track at y 100
+
+    with pytest.raises(SystemExit, match=r"layout image 1 done.jpg: car c p1 0.56 G"):
+        export([archive], tmp_path / "out", [DPT / 2])

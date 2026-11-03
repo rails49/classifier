@@ -5,8 +5,13 @@ Writes, under the output directory:
 - ``index.csv``: one row per labeled position of each labeled-complete image.
   ``x`` and ``y`` are in the archive's image pixels, ``heading`` in radians as
   ``TrackNode.heading``, and ``dpt`` is the archive's. A position at DPT ``d``
-  is at ``x · d / dpt``.
+  is at ``x · d / dpt``. ``ahead_g`` and ``behind_g`` are ``Position``'s: the distance
+  along the track, in gauges, to the nearest car span on it, with and against
+  ``heading``; blank when no span lies that way.
 - ``counts.json``: per archive, the positions written and those left out, by reason.
+
+A car end farther than ``OFF_TRACK_G`` from every track in a labeled-complete image
+stops the export, which lists each one by archive, image position and filename.
 - ``dpt<d>/<archive>/<image stem>.png``: each labeled-complete image resampled
   to DPT ``d``. A cached image of the size that DPT gives is not resampled again.
 """
@@ -24,7 +29,7 @@ import r49
 from PIL import Image
 
 from .placement import placements
-from .positions import LeftOut, label_positions
+from .positions import OFF_TRACK_G, LeftOut, label_positions, off_track_ends
 
 COLUMNS = [
     "archive",
@@ -37,6 +42,8 @@ COLUMNS = [
     "center_g",
     "placement",
     "dpt",
+    "ahead_g",
+    "behind_g",
 ]
 
 
@@ -45,6 +52,17 @@ def export(archives: Sequence[Path], out: Path, dpts: Sequence[float]) -> None:
     loaded = [(path.stem, r49.load(path)) for path in archives]
     fitted = [(name, archive.manifest, _dpt(name, archive)) for name, archive in loaded]
     groups = placements(fitted)
+    off = [
+        f"{name} image {k} {image.filename}: car {car} {end} {d:.2f} G"
+        for name, manifest, dpt in fitted
+        for k, image in enumerate(manifest.images, 1)
+        if image.labeled_complete
+        for car, end, d in off_track_ends(manifest.layout.tracks, image.labels, dpt)
+    ]
+    if off:
+        raise SystemExit(
+            f"Car ends farther than {OFF_TRACK_G} G from every track:\n" + "\n".join(off)
+        )
 
     out.mkdir(parents=True, exist_ok=True)
     counts: dict[str, dict[str, int]] = {}
@@ -76,6 +94,8 @@ def export(archives: Sequence[Path], out: Path, dpts: Sequence[float]) -> None:
                             f"{p.center_g:.2f}",
                             groups[(name, image.filename)],
                             dpt,
+                            _blank_or_g(p.ahead_g),
+                            _blank_or_g(p.behind_g),
                         ]
                     )
                     occupied += p.label == "occupied"
@@ -93,6 +113,10 @@ def export(archives: Sequence[Path], out: Path, dpts: Sequence[float]) -> None:
                 "near_track": left_out.near_track,
             }
     (out / "counts.json").write_text(json.dumps(counts, indent=2) + "\n")
+
+
+def _blank_or_g(value: float | None) -> str:
+    return "" if value is None else f"{value:.2f}"
 
 
 def _dpt(name: str, archive: r49.R49Archive) -> float:

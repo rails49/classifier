@@ -19,6 +19,11 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
 - `bin/test.sh`: Ruff, Black, Pyright and pytest. `bin/install-hooks.sh` runs it before each push.
 - `uv run export ~/rails49/r49/archives/iot49/*.r49 --dpt 16`: writes `cache/index.csv`,
   `cache/counts.json` and `cache/dpt16/`. `src/classifier/export.py` describes the output.
+- `uv run train`: trains and scores MobileNetV3-Small in 3 folds from `cache/` and writes
+  `runs/baseline/`. `src/classifier/train.py` describes the output. It uses MPS when
+  it can, and the sandbox blocks MPS, so run it outside the sandbox.
+- `pnpm -C bench bench <threads> runs/baseline/*.onnx`: times a batch of 50 patches in
+  onnxruntime-web WASM under Node.
 
 ## Agent skills
 
