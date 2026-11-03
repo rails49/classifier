@@ -14,6 +14,12 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
 - Terms: `GLOSSARY.md`. Decisions: `docs/adr/`. Research notes: `docs/research/`.
 - The `.r49` format is `rails49-r49`'s, pinned to one version (org [ADR-0022](https://github.com/rails49/.github/blob/main/docs/adr/0022-the-r49-format-is-r49s-and-each-consumer-pins-it.md)).
 
+## Commands
+
+- `bin/test.sh`: Ruff, Black, Pyright and pytest. `bin/install-hooks.sh` runs it before each push.
+- `uv run export ~/rails49/r49/archives/iot49/*.r49 --dpt 16`: writes `cache/index.csv`,
+  `cache/counts.json` and `cache/dpt16/`. `src/classifier/export.py` describes the output.
+
 ## Agent skills
 
 ### Issue tracker

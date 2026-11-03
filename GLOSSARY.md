@@ -11,7 +11,7 @@ A point on a track, one per gauge along it, where a patch is cut, labeled and sc
 _Avoid_: sample, location
 
 **Placement**:
-Where the cars stand in an image. Images of one archive with the same placement differ only in light.
+Where the cars stand in an image. Images with the same placement differ only in light, and across archives also in pose.
 _Avoid_: scene, configuration
 
 ### Owned elsewhere
