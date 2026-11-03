@@ -13,4 +13,4 @@ uv run pyright
 echo "🧪 Running Python tests..."
 uv run pytest -q
 
-echo "🎉 All checks passed successfully!"
+echo "🎉 All checks passed."

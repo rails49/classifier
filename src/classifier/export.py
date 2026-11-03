@@ -6,9 +6,9 @@ Writes, under the output directory:
   ``x`` and ``y`` are in the archive's image pixels, ``heading`` in radians as
   ``TrackNode.heading``, and ``dpt`` is the archive's. A position at DPT ``d``
   is at ``x · d / dpt``.
-- ``counts.json``: per archive, the positions written and those left out.
+- ``counts.json``: per archive, the positions written and those left out, by reason.
 - ``dpt<d>/<archive>/<image stem>.png``: each labeled-complete image resampled
-  to DPT ``d``. An image already in the cache is not resampled again.
+  to DPT ``d``. A cached image of the size that DPT gives is not resampled again.
 """
 
 from __future__ import annotations
@@ -60,7 +60,8 @@ def export(archives: Sequence[Path], out: Path, dpts: Sequence[float]) -> None:
                 positions, out_of_image = label_positions(
                     manifest.layout.tracks, image.labels, dpt, size
                 )
-                left_out.margin += out_of_image.margin
+                left_out.outside += out_of_image.outside
+                left_out.band += out_of_image.band
                 left_out.near_track += out_of_image.near_track
                 for p in positions:
                     writer.writerow(
@@ -87,7 +88,8 @@ def export(archives: Sequence[Path], out: Path, dpts: Sequence[float]) -> None:
                 "positions": occupied + clear,
                 "occupied": occupied,
                 "clear": clear,
-                "margin": left_out.margin,
+                "band": left_out.band,
+                "outside": left_out.outside,
                 "near_track": left_out.near_track,
             }
     (out / "counts.json").write_text(json.dumps(counts, indent=2) + "\n")
@@ -102,13 +104,16 @@ def _dpt(name: str, archive: r49.R49Archive) -> float:
 
 def _cache(archive: r49.R49Archive, filename: str, dpt: float, target: float, into: Path) -> None:
     path = into / f"{Path(filename).stem}.png"
+    resolution = archive.manifest.camera.resolution
+    size = (round(resolution.width * target / dpt), round(resolution.height * target / dpt))
     if path.exists():
-        return
+        with Image.open(path) as cached:
+            if cached.size == size:
+                return
     data = archive.image(filename)
     if data is None:
         raise SystemExit(f"{filename} is missing from the archive")
     with Image.open(io.BytesIO(data)) as image:
-        size = (round(image.width * target / dpt), round(image.height * target / dpt))
         resampled = image.convert("RGB").resize(size, Image.Resampling.LANCZOS, reducing_gap=3)
     into.mkdir(parents=True, exist_ok=True)
     resampled.save(path)

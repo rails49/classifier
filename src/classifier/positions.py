@@ -18,7 +18,8 @@ from r49 import CarLabel, Track, point_at, segment
 
 Label = Literal["occupied", "clear"]
 Region = Literal["inside", "end", "beside", "elsewhere"]
-"""Inside a train, within 3 G of a train end, clear beside an occupied track, clear elsewhere."""
+"""Inside a train, within ``END_G`` of a train end, clear within ``BESIDE_G`` of a car on
+another track, or clear elsewhere."""
 
 OCCUPIED_G = 2.0
 """A position is occupied when a car on its track comes within this many gauges."""
@@ -32,7 +33,7 @@ BESIDE_G = 3.0
 """A clear position this close to a car on another track is in the region ``beside``."""
 
 _STEP_PX = 1.0
-"""Spacing of the points a track's curve is sampled at."""
+"""Spacing of the polyline points along a track's curve."""
 
 
 @dataclass(frozen=True)
@@ -51,12 +52,14 @@ class Position:
 
 @dataclass
 class LeftOut:
-    """Positions left out of one image, by reason."""
+    """Positions left out, by reason."""
 
-    margin: int = 0
-    """Between 2 and 2.5 G from a car on their track."""
+    outside: int = 0
+    """Outside the image."""
+    band: int = 0
+    """Between ``OCCUPIED_G`` and ``CLEAR_G`` from a car on their track."""
     near_track: int = 0
-    """Within 1.5 G of another track."""
+    """Within ``NEAR_TRACK_G`` of another track."""
 
 
 def label_positions(
@@ -85,13 +88,16 @@ def label_positions(
         beside = [car for car, (track, _, _) in zip(cars, spans, strict=True) if track != index]
         for s in np.arange(math.floor(line.length / dpt + 1e-9) + 1) * dpt:
             x, y, heading = line.at(float(s))
+            if not (0 <= x < size[0] and 0 <= y < size[1]):
+                left_out.outside += 1
+                continue
             others = (other.project((x, y))[1] for other in lines if other is not line)
             if min(others, default=math.inf) <= NEAR_TRACK_G * dpt:
                 left_out.near_track += 1
                 continue
             gap = min((_outside(s, s0, s1) for s0, s1 in on_track), default=math.inf) / dpt
             if OCCUPIED_G < gap <= CLEAR_G:
-                left_out.margin += 1
+                left_out.band += 1
                 continue
             label: Label = "occupied" if gap <= OCCUPIED_G else "clear"
             region: Region = "elsewhere"

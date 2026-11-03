@@ -13,7 +13,7 @@ from classifier.export import export
 DPT = 17.9375
 
 
-def write_archive(path: Path) -> None:
+def write_archive(path: Path, px_per_mm: float = 2) -> None:
     jpeg = io.BytesIO()
     Image.new("RGB", (400, 200), "gray").save(jpeg, "JPEG")
     car = {
@@ -30,7 +30,7 @@ def write_archive(path: Path) -> None:
             "calibration": {
                 "points": [
                     {"px": {"x": 0, "y": 0}, "world": {"x": 0, "y": 0, "z": 0}},
-                    {"px": {"x": 200, "y": 0}, "world": {"x": 100, "y": 0, "z": 0}},
+                    {"px": {"x": 100 * px_per_mm, "y": 0}, "world": {"x": 100, "y": 0, "z": 0}},
                 ]
             },
             "tracks": [
@@ -86,7 +86,8 @@ def test_export_writes_the_index_the_counts_and_the_image_cache(tmp_path: Path):
             "positions": 22,
             "occupied": 15,
             "clear": 7,
-            "margin": 1,
+            "band": 1,
+            "outside": 0,
             "near_track": 0,
         }
     }
@@ -94,3 +95,16 @@ def test_export_writes_the_index_the_counts_and_the_image_cache(tmp_path: Path):
     with Image.open(out / "dpt8.96875" / "layout" / "done.png") as cached:
         assert cached.size == (200, 100)
     assert not (out / "dpt8.96875" / "layout" / "open.png").exists()
+
+
+def test_a_cached_image_is_resampled_again_when_its_archive_dpt_changes(tmp_path: Path):
+    archive = tmp_path / "layout.r49"
+    out = tmp_path / "out"
+    write_archive(archive)
+    export([archive], out, [DPT / 2])
+
+    write_archive(archive, px_per_mm=4)  # DPT doubles
+    export([archive], out, [DPT / 2])
+
+    with Image.open(out / "dpt8.96875" / "layout" / "done.png") as cached:
+        assert cached.size == (100, 50)

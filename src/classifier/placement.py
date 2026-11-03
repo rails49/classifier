@@ -20,7 +20,7 @@ def placements(archives: Sequence[tuple[str, Manifest, float]]) -> dict[tuple[st
     """A placement id for each labeled-complete image, by archive name and image
     filename. ``archives`` holds each archive's name, manifest and DPT.
 
-    Image positions of two archives are compared through the homography their
+    Pixel coordinates of two archives are compared through the homography their
     shared calibration points give; archives with fewer than four shared points
     share no placement."""
     images = [
@@ -64,8 +64,8 @@ def _same(a: _Points, b: _Points, tolerance: float) -> bool:
 
 
 def _homography(a: Manifest, b: Manifest) -> _Points | None:
-    """The homography from ``a``'s image positions to ``b``'s, fitted to the
-    calibration points with the same layout position in both."""
+    """The homography from ``a``'s pixel coordinates to ``b``'s, fitted to the
+    calibration points with the same world coordinates in both."""
     if a is b:
         return np.eye(3)
 
