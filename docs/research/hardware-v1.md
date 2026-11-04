@@ -5,6 +5,9 @@ options can run the MobileNetV3-Small classifier of [#4](https://github.com/rail
 at the rate [rails49/occupancy#272](https://github.com/rails49/occupancy/issues/272) asks for, and which
 to choose. It builds on the detector's hardware and camera notes [R6–R9] and does not repeat them.
 
+The Mac mini `gleis49` is now in use and is not an option here. `hardware-v2.md` measures it. The
+recommendation below predates that choice.
+
 Evidence tags: M measured for this note, P published figure, E estimate or arithmetic, with the method
 shown. Sources are listed at the end as [R…] (rails49 repos and devices) and [S…] (outside). Sources
 marked "secondary" are not the vendor's own. The box and a Raspberry Pi 4 were measured [M2, M3]; the
@@ -31,8 +34,8 @@ it.
 1. With fewer sensors per frame the rate rises about in proportion, e.g. 25 sensors at about twice the
    rate (E; only batches of 50 were timed).
 2. The box. 1×: 53 Hz on all 4 cores, 18 Hz on one. 2×: 12 Hz on all 4 cores, 5.1 Hz on one. Its
-   GPU gives 31 Hz and 8.9 Hz and leaves the CPU to the railroad (CPU load during GPU inference not
-   measured). int8 is slower than float on this CPU. It needs a 4K UVC camera for DPT 16.
+   GPU gives 31 Hz and 8.9 Hz (CPU load during GPU inference not measured). int8 is slower than float
+   on this CPU. It needs a 4K UVC camera for DPT 16.
 3. The Raspberry Pi 4 (8 GB, 1.8 GHz): 14 Hz at 1×, 4.5 Hz at 2×, with all 4 cores busy. The owned
    Camera Module 2 (8 MP) gives DPT 14 over the 2.1 m field, or DPT 16 over 1.85 m. A Camera Module 3
    ($25) gives DPT 20 over 2.1 m.
@@ -190,7 +193,7 @@ Times in ms. The int8 models are the random-calibration ones from the M2 Max sec
 than float on this CPU, which has no VNNI or AVX.
 
 Verdict. 1×: 53 Hz on 4 cores, 18 Hz on one, 31 Hz on the GPU. 2×: 12 Hz on 4 cores, 5.1 Hz on one,
-8.9 Hz on the GPU. The GPU leaves the CPU free. int8 does not help on this CPU.
+8.9 Hz on the GPU, with CPU load during GPU inference not measured. int8 does not help on this CPU.
 
 ## Option 2: Raspberry Pi 4 with a Pi camera
 
@@ -217,9 +220,9 @@ Batch of 50, median of 50 runs, ms; no camera attached.
 | 2× int8 | 411.1 | 279.8 | 225.8 | failed |
 
 The estimate above was 1.1–1.5× too fast at 1× and up to 1.5× at 2×, taking the best runtime.
-onnxruntime's aarch64 float path is 2–6× slower than OpenVINO here; int8 helps onnxruntime but not
-enough. OpenVINO's ARM CPU plugin fails on the int8 models. LiteRT with XNNPACK is not measured; it
-would need the model converted from ONNX.
+On 4 threads onnxruntime's aarch64 float path is 1.6–1.8× slower than OpenVINO here; int8 helps
+onnxruntime but not enough. OpenVINO's ARM CPU plugin fails on the int8 models. LiteRT with XNNPACK is
+not measured; it would need the model converted from ONNX.
 
 Camera. The owned camera is a Camera Module 2 (8 MP). The Pi 4 has one camera connector [S10].
 
