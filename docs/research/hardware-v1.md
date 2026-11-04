@@ -7,29 +7,46 @@ to choose. It builds on the detector's hardware and camera notes [R6–R9] and d
 
 Evidence tags: M measured for this note, P published figure, E estimate or arithmetic, with the method
 shown. Sources are listed at the end as [R…] (rails49 repos and devices) and [S…] (outside). Sources
-marked "secondary" are not the vendor's own. Nothing ran on any of the four candidate devices. The box's
-hardware was read over ssh, without running anything else on it [M1].
+marked "secondary" are not the vendor's own. The box and a Raspberry Pi 4 were measured [M2, M3]; the
+phones and the Pi 5 are estimates.
 
 ## Answer
 
-1. 50 patches at 10 Hz is 3.3 G MAC/s at 1× and 10.5 G MAC/s at 2×. Each batch of 50 must finish
-   within the 100 ms frame period; this note plans for 50 ms.
-2. The Galaxy A13 5G fails on its camera: it records video at 1080p, which is DPT 8 over the layout.
-3. The Raspberry Pi 4 fits 1× on its CPU (about 47–63 ms per batch, E) but not 2× (150–200 ms, E).
-   With a Camera Module 3 it reaches DPT 20 at 14 fps; with a Camera Module 2, DPT 14.
-4. The box (Celeron N5100) has no AVX or FMA. Measured: its CPU runs 1× in 18 ms on 4 threads and 2×
-   in 83–90 ms (M2). 2× is inside the 100 ms limit but over the 50 ms target, with all 4 cores busy.
-   Its integrated GPU is slower than its CPU (32 ms at 1×, 113 ms at 2×), and int8 is slower than float.
-5. The iPhone XS Max has compute to spare: on its Neural Engine a batch should take about 4 ms at 1× and
-   7 ms at 2× (E, scaled from 1.2 and 2.3 ms measured on the M2 Max's Neural Engine). Its 4K camera
-   gives DPT 16–17. What stops it is not compute. It needs a custom iOS app that stays in the
-   foreground on the ceiling around the clock, and it is on iOS 18, which Apple still patches but no
-   longer upgrades.
-6. Recommendation: a Raspberry Pi 5 with a Camera Module 3, about $200. It is the cheapest option that
-   fits 2× at 10 Hz on published-figure estimates (50–105 ms float, E, with int8 as margin), and the
-   camera gives DPT 20 over the whole layout from one module hung at 1.62 m. Before buying, measure
-   the Pi 4. If 1× is chosen, the box's CPU or the Pi 4 with a Camera Module 3 ($25) is enough.
-7. On the M2 Max, idle, the batch-of-50 times match HW.md's busy-machine figures within 3%. int8 cuts
+The rate each device reaches, for all 50 sensors (one batch of 50 patches per frame). Rate = 1000 /
+batch time in ms. Compute only: capture, cutting the patches and other work on the same machine are
+not included. The goal in occupancy#272 is 10 Hz; a slower rate is usable if the control is built for
+it.
+
+| Device, runtime | 1× | 2× | Source |
+|---|---|---|---|
+| Box CPU, 4 threads, OpenVINO | 53 Hz | 12 Hz | M2 |
+| Box CPU, 2 threads, onnxruntime | 33 Hz | 7.8 Hz | M2 |
+| Box CPU, 1 thread, onnxruntime | 18 Hz | 5.1 Hz | M2 |
+| Box GPU, OpenVINO | 31 Hz | 8.9 Hz | M2 |
+| Raspberry Pi 4, 4 threads, OpenVINO | 14 Hz | 4.5 Hz | M3 |
+| Raspberry Pi 5, 4 threads | 29–43 Hz | 9–13.5 Hz | E, Pi 4 × 2–3 |
+| iPhone XS Max, Neural Engine | about 250 Hz | about 140 Hz | E; the camera limits it to 30–60 fps |
+| Galaxy A13 5G, CPU | 25–33 Hz | 8–10.5 Hz | E |
+
+1. With fewer sensors per frame the rate rises about in proportion, e.g. 25 sensors at about twice the
+   rate (E; only batches of 50 were timed).
+2. The box. 1×: 53 Hz on all 4 cores, 18 Hz on one. 2×: 12 Hz on all 4 cores, 5.1 Hz on one. Its
+   GPU gives 31 Hz and 8.9 Hz and leaves the CPU to the railroad (CPU load during GPU inference not
+   measured). int8 is slower than float on this CPU. It needs a 4K UVC camera for DPT 16.
+3. The Raspberry Pi 4 (8 GB, 1.8 GHz): 14 Hz at 1×, 4.5 Hz at 2×, with all 4 cores busy. The owned
+   Camera Module 2 (8 MP) gives DPT 14 over the 2.1 m field, or DPT 16 over 1.85 m. A Camera Module 3
+   ($25) gives DPT 20 over 2.1 m.
+4. A Raspberry Pi 5 is estimated at 29–43 Hz at 1× and 9–13.5 Hz at 2×, about what the box does on
+   its CPU.
+5. The iPhone XS Max has the most compute: about 250 Hz at 1× and 140 Hz at 2× on its Neural Engine
+   (E, scaled from the M2 Max), limited in practice by its camera. Its 4K camera gives DPT 16–17. It
+   needs a custom iOS app that stays in the foreground on the ceiling around the clock, and it is on
+   iOS 18, which Apple still patches but no longer upgrades.
+6. The Galaxy A13 5G records video at 1080p, DPT 8 over the layout, and gets no more security updates.
+7. Recommendation: the box with a 4K UVC camera. It reaches 53 Hz at 1× or 12 Hz at 2× on its CPU,
+   or 31 Hz and 8.9 Hz on its GPU, and nothing else needs to be bought. The Pi 4 with the owned camera
+   works now for trials at 14 Hz (1×) or 4.5 Hz (2×). A Pi 5 adds little at 2× over the box.
+8. On the M2 Max, idle, the batch-of-50 times match HW.md's busy-machine figures within 3%. int8 cuts
    native CPU time 1.4–7.4×, far more than published phone figures for MobileNetV3-Small (1.0–1.35×).
    Accuracy of the int8 model is not measured.
 
@@ -47,9 +64,8 @@ layout is 2.0 × 1.0 m, N scale (gauge 9 mm); the field one camera must cover, w
 | MACs per batch of 50 (one frame) | 0.33 G | 1.05 G | E |
 | MACs per second at 10 Hz | 3.3 G | 10.5 G | E |
 
-- Time budget. Latency is at most one frame period, so each frame must finish within it [R9]. At 10 Hz
-  that is 100 ms per batch. This note plans for 50 ms, leaving half the period for capture, cutting the
-  50 patches and the rest of the machine's work (assumption).
+- Rate. At 10 Hz a batch has 100 ms [R9]. Capture, cutting the 50 patches and the machine's other
+  work share that time, so the rate reached in operation is below the compute-only rate in this note.
 - The MAC counts cover convolutions and matrix multiplies only, so they are a lower bound [R1].
 - Which size is needed is open. In the run before the data cleanup, 2× had about half the false
   occupied rate of 1× [R1].
@@ -60,16 +76,16 @@ layout is 2.0 × 1.0 m, N scale (gauge 9 mm); the field one camera must cover, w
 
 ## Comparison
 
-Times are for one batch of 50 patches. Target ≤ 50 ms, limit 100 ms.
+Times are for one batch of 50 patches, with the rate for 50 sensors in brackets.
 
-| Option | Compute and runtime | 1× (ms) | 2× (ms) | Camera, DPT over 2.1 m, rate | Cost | Main risks |
+| Option | Compute and runtime | 1× ms (Hz) | 2× ms (Hz) | Camera, DPT over 2.1 m, rate | Cost | Main risks |
 |---|---|---|---|---|---|---|
-| 1. Box, CPU | Celeron N5100, 4 Tremont cores, SSE4.2 only; onnxruntime | 18 (M2) | 83–90 (M2) | 4K UVC: 16.5 with a lens of about 70°, 14 with a Brio-type lens; 30 fps (E, [R7]) | box owned; camera to buy | 2× uses all 4 cores; camera decode not measured |
-| 1. Box, iGPU | UHD Graphics, 24 EU, 800 MHz; OpenVINO GPU | 32 (M2) | 113 (M2) | as above | as above | slower than the CPU |
-| 2. Raspberry Pi 4 | 4 × Cortex-A72, 1.5 or 1.8 GHz; onnxruntime or LiteRT on CPU | 47–63 (E) | 150–200 (E) | Camera Module 3: 19.7 at 1.62 m, 14 fps; Module 2: 14.1 at 1.74 m, 21 fps (E) | owned; Module 3 $25 | 2× misses 100 ms; ISP at 12 MP and 10–14 fps not measured |
-| 3. iPhone XS Max, native app | A12 Neural Engine (8 cores, 5 TOPS); Core ML | ~4 (E) | ~7 (E) | 4K60; about 16.5 at about 1.58 m (E) | owned; $99/year or a rebuild every 7 days | app must stay in the foreground; iOS 18 only |
-| 3. Galaxy A13 5G, native app | Dimensity 700: 2 × A76 2.2 GHz + 6 × A55, no NPU named; CPU | 30–40 (E) | 95–125 (E) | 1080p30: DPT 8 (P, E) | owned | camera fails DPT 16; no security updates |
-| 4. Raspberry Pi 5 | 4 × Cortex-A76, 2.4 GHz; onnxruntime on CPU | 16–33 (E) | 50–105 (E) | Camera Module 3, as for the Pi 4 | $175 (8 GB) + $25 | estimates only |
+| 1. Box, CPU | Celeron N5100, 4 Tremont cores, SSE4.2 only; OpenVINO, 4 threads | 18.7 (53) (M2) | 83 (12) (M2) | 4K UVC: 16.5 with a lens of about 70°, 14 with a Brio-type lens; 30 fps (E, [R7]) | box owned; camera to buy | shares the CPU with the railroad; camera decode not measured |
+| 1. Box, iGPU | UHD Graphics, 24 EU, 800 MHz; OpenVINO GPU | 32 (31) (M2) | 113 (8.9) (M2) | as above | as above | CPU load during GPU inference not measured |
+| 2. Raspberry Pi 4 | 4 × Cortex-A72, 1.8 GHz; OpenVINO on CPU | 70 (14) (M3) | 223 (4.5) (M3) | Camera Module 3: 19.7 at 1.62 m, 14 fps; Module 2 (owned): 14.1 at 1.74 m, 21 fps (E) | owned; Module 3 $25 | all 4 cores busy; ISP not measured |
+| 3. iPhone XS Max, native app | A12 Neural Engine (8 cores, 5 TOPS); Core ML | ~4 (~250) (E) | ~7 (~140) (E) | 4K60; about 16.5 at about 1.58 m (E) | owned; $99/year or a rebuild every 7 days | app must stay in the foreground; iOS 18 only |
+| 3. Galaxy A13 5G, native app | Dimensity 700: 2 × A76 2.2 GHz + 6 × A55, no NPU named; CPU | 30–40 (25–33) (E) | 95–125 (8–10.5) (E) | 1080p30: DPT 8 (P, E) | owned | camera gives DPT 8; no security updates |
+| 4. Raspberry Pi 5 | 4 × Cortex-A76, 2.4 GHz; CPU | 23–35 (29–43) (E) | 74–111 (9–13.5) (E) | Camera Module 3, as for the Pi 4 | $175 (8 GB) + $25 | scaled from the measured Pi 4 |
 | Reference: M2 Max | onnxruntime CPU, 8 threads / Core ML on the Neural Engine | 11.6 / 1.2 (M) | 22.4 / 2.3 (M) | – | owned | – |
 
 ## Measurements on the M2 Max
@@ -173,8 +189,8 @@ default GPU precision is FP16.
 Times in ms. The int8 models are the random-calibration ones from the M2 Max section; they are slower
 than float on this CPU, which has no VNNI or AVX.
 
-Verdict. 1× fits on the CPU with room to spare. 2× fits the 100 ms limit on the CPU, not the 50 ms
-target, and leaves no cores for anything else. The iGPU and int8 do not help.
+Verdict. 1×: 53 Hz on 4 cores, 18 Hz on one, 31 Hz on the GPU. 2×: 12 Hz on 4 cores, 5.1 Hz on one,
+8.9 Hz on the GPU. The GPU leaves the CPU free. int8 does not help on this CPU.
 
 ## Option 2: Raspberry Pi 4 with a Pi camera
 
@@ -189,7 +205,23 @@ cores), at 224 × 224 in 30.7 ms model time [S16]. MobileNetV3-Large is 217 M MA
 2× (E). Both sources measure 224 × 224 inputs at batch 1; the M2 Max table above shows the larger 2×
 feature maps run more efficiently, which favours 2× somewhat. A 1.8 GHz board is up to 20% faster (E).
 
-Camera. "pi-cam" does not say which module. The Pi 4 has one camera connector [S10].
+Measured [M3]. Raspberry Pi 4 Model B Rev 1.4, 8 GB, 1.8 GHz, Raspberry Pi OS Lite 64-bit (Debian 13),
+not throttled, 47 °C after the run. onnxruntime 1.31.1 and OpenVINO 2026.4.1 from pip, Python 3.13.
+Batch of 50, median of 50 runs, ms; no camera attached.
+
+| Model | ort CPU 1 thread | 2 threads | 4 threads | OpenVINO CPU |
+|---|---|---|---|---|
+| 1× float | 322.7 | 184.8 | 123.4 | 70.0 |
+| 2× float | 799.4 | 485.8 | 349.9 | 222.8 |
+| 1× int8 | 113.0 | 80.9 | 70.4 | failed |
+| 2× int8 | 411.1 | 279.8 | 225.8 | failed |
+
+The estimate above was 1.1–1.5× too fast at 1× and up to 1.5× at 2×, taking the best runtime.
+onnxruntime's aarch64 float path is 2–6× slower than OpenVINO here; int8 helps onnxruntime but not
+enough. OpenVINO's ARM CPU plugin fails on the int8 models. LiteRT with XNNPACK is not measured; it
+would need the model converted from ONNX.
+
+Camera. The owned camera is a Camera Module 2 (8 MP). The Pi 4 has one camera connector [S10].
 
 | Module | Pixels | Field, horizontal | Height for a 2.1 m field | DPT | Full-resolution rate |
 |---|---|---|---|---|---|
@@ -206,7 +238,9 @@ documents 12 MP HQ raw frames at 10 fps to fast storage [S37] (not measured here
 Cost and upkeep. Owned. A Camera Module 3 is $25 if the owned camera is a Module 2. One more Linux
 machine to update.
 
-Verdict. Fits 1× at 10 Hz with a Camera Module 3. Does not fit 2×.
+Verdict. 14 Hz at 1× and 4.5 Hz at 2× with OpenVINO on all 4 cores, before the camera pipeline. The
+Camera Module 2 gives DPT 14 over 2.1 m, below the DPT 16 the classifier was trained at, or DPT 16 over
+1.85 m.
 
 ## Option 3: phone with a custom app
 
@@ -270,8 +304,8 @@ Verdict. Fails on the camera. Also out of security support.
 Only candidates that clearly fit are listed.
 
 - Raspberry Pi 5 with a Camera Module 3. BCM2712, 4 × Cortex-A76 at 2.4 GHz [S9]; Raspberry Pi states
-  two to three times the CPU performance of the Pi 4 [S13]. On the Pi 4 estimate above that is
-  10–21 G MAC/s: 16–33 ms at 1×, 50–105 ms at 2× (E). The A76 has dot-product instructions, so int8 may
+  two to three times the CPU performance of the Pi 4 [S13]. Applied to the measured Pi 4 (OpenVINO,
+  70 and 223 ms [M3]): 23–35 ms at 1×, 74–111 ms at 2× (E). The A76 has dot-product instructions, so int8 may
   add margin (on the M2 Max int8 cut 2× time 1.4–3.7×, M; not measured on a Pi). Two camera connectors
   [S13], so a second camera is possible later. Price: $110 (4 GB) or $175 (8 GB) at PiShop on
   2026-11-01, after Raspberry Pi's April 2026 memory-driven increases [R8, S14]. Camera Module 3: $25
@@ -298,10 +332,11 @@ Not listed:
 
 1. Measure first, at no cost:
    - On the box: done [M2]. 1× takes 18 ms, 2× 83–90 ms on 4 cores; the iGPU is slower.
-   - On the Pi 4: onnxruntime CPU, 4 threads, float and int8, 1× and 2×, with the camera running.
-2. If 1× is the model: the box's CPU with a 4K UVC camera, or the Pi 4 with a Camera Module 3 ($25).
-3. If 2× is the model: buy a Raspberry Pi 5 (8 GB, $175) and a Camera
-   Module 3 ($25). It sends sensor states to the broker on the box over the network.
+   - On the Pi 4: done [M3]. 1× takes 70 ms, 2× 223 ms, with OpenVINO on 4 cores.
+2. Use the box with a 4K UVC camera: 53 Hz at 1× and 12 Hz at 2× on its CPU, 31 Hz and 8.9 Hz on its
+   GPU. The Pi 4 with the owned Camera Module 2 runs trials now at 14 Hz (1×) or 4.5 Hz (2×).
+3. A Raspberry Pi 5 is estimated at 9–13.5 Hz at 2× (E), about the box's CPU. A higher 2× rate needs a
+   faster computer or an accelerator from Option 4, measured before buying.
 4. Do not use the Galaxy A13 5G. Use the iPhone XS Max only if a custom iOS app that runs in the
    foreground on the ceiling is acceptable; it is the only owned device with clear compute margin for
    2×.
@@ -319,8 +354,8 @@ Engine; that belongs to detector#60.
 2. Box: answered [M2].
 3. Box: CPU load of capturing 4K at 10 fps from a UVC camera, MJPEG decoded in software and through
    VA-API.
-4. Pi 4: which camera module is owned? Batch time at 1× and 2× with the camera streaming 12 MP at
-   10–14 fps. Board revision (1.5 or 1.8 GHz).
+4. Pi 4: batch time with the Camera Module 2 streaming 8 MP; LiteRT with XNNPACK against OpenVINO.
+   Owned module and clock: answered [M3].
 5. int8: accuracy at the false-clear threshold with a calibration set of real patches, and its speed on
    each device. The int8 timings here use random calibration.
 6. Sustained rate over 30 minutes or more, on whichever device is chosen, with the camera running.
@@ -358,6 +393,8 @@ rails49 and devices
   <https://github.com/rails49/occupancy/blob/main/docs/adr/0022-the-classifier-joins-the-live-path.md>
 - [M1] The box, read over ssh on 2026-11-03: `lscpu`, `free -h`, `lsusb -t`, `lspci`, `uname -a`,
   `/etc/os-release`, `docker ps`, `uptime`.
+- [M3] Raspberry Pi 4 `classifier49`, 2026-11-03, two minutes after first boot, load average 0.71:
+  `bench_box.py` in a Python venv, same models and settings as [M2].
 - [M2] The box, 2026-11-03, load average 0.13 before the run: `bench_box.py` (median ms for a batch of
   50; onnxruntime CPU at 1, 2 and 4 threads, OpenVINO CPU and GPU with the LATENCY hint) in a
   throwaway `ubuntu:24.04` container with `/dev/dri` passed in. The container, image and files were
