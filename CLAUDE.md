@@ -7,6 +7,8 @@ plan is rails49/occupancy#272.
 The classifier sometimes reports a car that is not there, and sometimes misses
 one. Present nothing here as a safety interlock.
 
+gate: bin/test.sh
+
 ## Where things are
 
 What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/blob/main/docs/adr/0021-each-fact-has-one-owner-and-the-glossary-is-glossary-md.md). See `docs/agents/domain.md`.
