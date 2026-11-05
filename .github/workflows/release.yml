@@ -1,0 +1,84 @@
+# A pushed tag vX.Y.Z publishes rails49-classifier to PyPI through trusted
+# publishing, then makes a GitHub Release that names the model. The steps a
+# person takes are in docs/releasing.md.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+
+jobs:
+  # Builds the wheel once, scores a frame with it as installed, and hands that
+  # same file to the publish job.
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Full history: the check that the tag is on main needs main present.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check the tag
+        run: |
+          if ! [[ "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "$GITHUB_REF_NAME is not vX.Y.Z; nothing is published" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "$GITHUB_REF_NAME is not on main; nothing is published" >&2
+            exit 1
+          fi
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "$GITHUB_REF_NAME does not match the package's version $version; nothing is published" >&2
+            exit 1
+          fi
+
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          version: "0.12.6"
+
+      - run: bin/check-wheel.sh "$RUNNER_TEMP/packages"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: packages
+          path: ${{ runner.temp }}/packages
+          if-no-files-found: error
+
+  # A failed publish is fixed by re-running this job; the wheel does not change.
+  pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: packages
+          path: ${{ runner.temp }}/packages
+
+      - uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: ${{ runner.temp }}/packages
+
+  github-release:
+    needs: pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          model=$(basename src/classifier/model/*.onnx .onnx)
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --notes "Model: $model"

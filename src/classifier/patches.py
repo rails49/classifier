@@ -5,56 +5,19 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 
 import numpy as np
 import numpy.typing as npt
 import torch
 import torch.nn.functional as F
 
+from .cut import Moves, Shape, sample_points
 from .data import Index
 from .positions import CLEAR_G, OCCUPIED_G
 
 _Floats = npt.NDArray[np.float64]
 _Bools = npt.NDArray[np.bool_]
-
-
-@dataclass(frozen=True)
-class Shape:
-    """A patch ``across_g`` × ``along_g`` gauges at ``dpt``, the track along its width."""
-
-    across_g: float = 3.0
-    along_g: float = 6.0
-    dpt: float = 16.0
-
-    @property
-    def size(self) -> tuple[int, int]:
-        """Height and width in pixels."""
-        return round(self.across_g * self.dpt), round(self.along_g * self.dpt)
-
-
-@dataclass(frozen=True)
-class Moves:
-    """How each patch departs from its position: shifted ``along_g`` with the
-    track's heading and ``across_g`` to its right in image pixels, turned by
-    ``angle`` radians, scaled by ``scale``, turned 180° and mirrored across the
-    track."""
-
-    along_g: _Floats
-    across_g: _Floats
-    angle: _Floats
-    scale: _Floats
-    turn: _Bools
-    mirror: _Bools
-
-    @staticmethod
-    def none(n: int) -> Moves:
-        zeros, falses = np.zeros(n), np.zeros(n, dtype=bool)
-        return Moves(zeros, zeros, zeros, np.ones(n), falses, falses)
-
-    def take(self, rows: _Bools) -> Moves:
-        """The moves ``rows`` selects."""
-        return Moves(*(getattr(self, f.name)[rows] for f in fields(self)))
 
 
 @dataclass(frozen=True)
@@ -113,7 +76,7 @@ class Cutter:
     def __call__(self, index: Index, moves: Moves) -> torch.Tensor:
         """The patches at ``index``'s positions, moved, as B × RGB × height ×
         width in [0, 1] on the cutter's device."""
-        r, px_per_g = self._r, self.dpt
+        r = self._r
         cx, cy = np.round(index.x).astype(int), np.round(index.y).astype(int)
         windows = np.stack(
             [
@@ -121,19 +84,8 @@ class Cutter:
                 for a, i, x, y in zip(index.archive, index.image, cx, cy, strict=True)
             ]
         )
-        t = index.heading
-        x = index.x + (moves.along_g * np.cos(t) - moves.across_g * np.sin(t)) * px_per_g - cx + r
-        y = index.y + (moves.along_g * np.sin(t) + moves.across_g * np.cos(t)) * px_per_g - cy + r
-        phi = t + moves.angle + np.pi * moves.turn
-        k = px_per_g / self.shape.dpt * moves.scale
-        h, w = self.shape.size
-        u = np.arange(w) + 0.5 - w / 2
-        v = np.arange(h) + 0.5 - h / 2
-        v_b = np.where(moves.mirror[:, None], -v, v) * k[:, None]  # B × h
-        u_b = u * k[:, None]  # B × w
-        cos, sin = np.cos(phi)[:, None, None], np.sin(phi)[:, None, None]
-        sx = x[:, None, None] + u_b[:, None, :] * cos - v_b[:, :, None] * sin
-        sy = y[:, None, None] + u_b[:, None, :] * sin + v_b[:, :, None] * cos
+        sx, sy = sample_points(index.x, index.y, index.heading, self.dpt, self.shape, moves)
+        sx, sy = sx - cx[:, None, None] + r, sy - cy[:, None, None] + r
         grid = np.stack([sx / r - 1, sy / r - 1], axis=-1).astype(np.float32)
         source = torch.from_numpy(windows).to(self.device).permute(0, 3, 1, 2).float() / 255
         return F.grid_sample(

@@ -10,6 +10,9 @@ Writes, under the output directory:
 - ``<size>-<archive>.onnx``: the classifier of each input size and fold. It
   takes ``patches``, B × RGB × 48 × 96 in [0, 1] with the track along the
   width, and returns ``occupied``, B scores in [0, 1].
+- ``<size>-<archive>.json``: beside each ONNX file, the ``across_g``, ``along_g``
+  and ``dpt`` of its patches, and its ``threshold``. ``classifier.Classifier``
+  reads it.
 - ``metrics.json``: per input size, compute per patch, CPU time for a batch of
   50 in native onnxruntime, and per fold the threshold and the rates on the
   held-out archive; the rates of all held-out positions together, each at its
@@ -192,6 +195,8 @@ def run(
                 "held_out": report(score, held_out, t, rng),
             }
             export_onnx(model, setup.shape, out / f"{size}-{archive}.onnx")
+            settings = {**asdict(setup.shape), "threshold": t}
+            (out / f"{size}-{archive}.json").write_text(json.dumps(settings, indent=2) + "\n")
         result["all"] = report(over_threshold, index, 0.0, np.random.default_rng(setup.seed))
         result["compute"] = compute(make(), setup.shape)
         result["onnx_cpu_ms"] = {
