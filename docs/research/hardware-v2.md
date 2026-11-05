@@ -1,6 +1,6 @@
 # Hardware for the classifier, version 2
 
-Written 2026-11-04. Measurements for the brief in `~/rails49/HW.md`. The Mac mini is in use until it
+Written 2026-11-04. Measurements for the brief in [`hardware-v2-brief.md`](hardware-v2-brief.md). The Mac mini is in use until it
 no longer keeps up, then gets replaced. No camera was attached, so USB capture is not measured.
 Item 3 is covered only in part and item 4 not at all.
 
@@ -31,7 +31,7 @@ For 50 sensors at 2× (compute only, with no capture, decode or patch cutting):
 ## Machine
 
 Mac mini 2018 (`Macmini8,1`), Core i7-8700B, 6 cores and 12 threads, 32 GB, UHD 630. Host `gleis49`,
-Ubuntu 26.04.1 (not 24.04 as `HW.md` says), kernel 7.3.1-2-t2-resolute. Governor `powersave` with
+Ubuntu 26.04.1 (not 24.04 as the brief says), kernel 7.3.1-2-t2-resolute. Governor `powersave` with
 `balance_performance`, left as installed. `t2fanrd` is not running; the SMC manages the fan.
 
 Runtimes in an Ubuntu 24.04 container (`bench/hardware/Dockerfile`): onnxruntime 1.31.1, OpenVINO
