@@ -1,4 +1,4 @@
-"""Run time_one.py over the throughput grid of HW.md, appending to a JSON-lines file.
+"""Run time_one.py over the throughput grid of the v2 brief, appending to a JSON-lines file.
 
 The order is shuffled, so heating over the run does not line up with any one setting. A
 reference configuration repeats through the run to show drift. Each configuration is its own

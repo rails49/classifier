@@ -1,6 +1,6 @@
 # Hardware for the version-1 classifier
 
-Written 2026-11-03. Research for the hardware question in `~/rails49/HW.md` [R1]: which of four
+Written 2026-11-03. Research for the hardware question in `HW.md` [R1]: which of four
 options can run the MobileNetV3-Small classifier of [#4](https://github.com/rails49/classifier/issues/4)
 at the rate [rails49/occupancy#272](https://github.com/rails49/occupancy/issues/272) asks for, and which
 to choose. It builds on the detector's hardware and camera notes [R6–R9] and does not repeat them.
@@ -371,7 +371,8 @@ Engine; that belongs to detector#60.
 
 rails49 and devices
 
-- [R1] `~/rails49/HW.md`, classifier figures and the four options (2026-11-03).
+- [R1] `HW.md`, a file outside any repository, classifier figures and the four options (2026-11-03). Its
+  last version is [`hardware-v2-brief.md`](hardware-v2-brief.md), which has idle figures and no options.
 - [R2] rails49/occupancy#272, comment "Goal change", 2026-11-03:
   <https://github.com/rails49/occupancy/issues/272#issuecomment-6605156548>
 - [R3] rails49/occupancy#272, issue body (goals, camera, DPT 16):
