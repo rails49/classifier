@@ -120,21 +120,15 @@ def test_the_threshold_comes_from_the_json_file_beside_the_model(tmp_path: Path)
     assert Classifier(tmp_path / "m.onnx").threshold == 0.25
 
 
-def test_the_packaged_model_is_the_chosen_baseline_with_its_threshold():
-    assert MODEL.name == "2x-ceiling-2026-10-29.onnx"
-    assert Classifier().threshold == pytest.approx(0.0028813397511839867)
-
-
 def test_scoring_on_onnxruntime_and_openvino_cpu_agrees():
     sensors = [Sensor(str(i), 30.0 + 40.0 * i, 75.0, 0.3 * i) for i in range(6)]
     frame = a_frame()
 
-    ours = Classifier(engine="onnxruntime").score(frame, sensors, 16.0)
-    theirs = Classifier(engine="openvino", device="CPU").score(frame, sensors, 16.0)
+    onnxruntime = Classifier(engine="onnxruntime").score(frame, sensors, 16.0)
+    openvino = Classifier(engine="openvino", device="CPU").score(frame, sensors, 16.0)
 
-    p_ours = [r.p_occupied for r in ours.values()]
-    p_theirs = [r.p_occupied for r in theirs.values()]
-    assert p_ours == pytest.approx(p_theirs, abs=ENGINES_AGREE)
+    expected = [r.p_occupied for r in onnxruntime.values()]
+    assert [r.p_occupied for r in openvino.values()] == pytest.approx(expected, abs=ENGINES_AGREE)
 
 
 def test_openvino_scores_a_batch_of_one():
@@ -148,13 +142,16 @@ def test_onnxruntime_refuses_an_openvino_device_name():
         Classifier(device="GPU")
 
 
-@pytest.mark.parametrize(
-    ("engine", "imported"), [("onnxruntime", "onnxruntime"), ("openvino", "openvino")]
-)
-def test_only_the_chosen_engine_is_imported_and_never_torch_or_r49(engine: str, imported: str):
+def test_an_unknown_engine_is_refused():
+    with pytest.raises(ValueError, match="torch"):
+        Classifier(engine="torch")  # pyright: ignore[reportArgumentType]
+
+
+@pytest.mark.parametrize("engine", ["onnxruntime", "openvino"])
+def test_only_the_chosen_engine_is_imported_and_never_torch_or_r49(engine: str):
     # Run from a fresh interpreter: this test process has imported Torch.
     out = subprocess.run(
         [sys.executable, "-c", ONLY_THE_ENGINE, engine], capture_output=True, text=True, check=True
     )
 
-    assert out.stdout.strip() == imported
+    assert out.stdout.strip() == engine

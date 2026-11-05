@@ -1,6 +1,6 @@
-"""Where a patch's pixels sample a frame, used by training and at run time, and
-the cut at run time. A frame is height × width × RGB, 8 bits. Its pixel ``i``
-covers [i, i + 1), so the pixel's center is at i + 0.5."""
+"""Where a patch's pixels sample an image, used by training and at run time, and
+the cut of a live frame at run time. Pixel ``i`` of an image or frame covers
+[i, i + 1), so the pixel's center is at i + 0.5."""
 
 from __future__ import annotations
 
@@ -54,9 +54,9 @@ class Moves:
 def sample_points(
     x: _Floats, y: _Floats, heading: _Floats, dpt: float, shape: Shape, moves: Moves
 ) -> tuple[_Floats, _Floats]:
-    """The x and y that each pixel of each patch samples in a frame at ``dpt``,
+    """The x and y that each pixel of each patch samples in an image at ``dpt``,
     each B × height × width. ``x``, ``y`` and ``heading`` are the patches'
-    positions in the frame's pixels and their headings in radians."""
+    centers in the image's pixels and their headings in radians."""
     sx = x + (moves.along_g * np.cos(heading) - moves.across_g * np.sin(heading)) * dpt
     sy = y + (moves.along_g * np.sin(heading) + moves.across_g * np.cos(heading)) * dpt
     phi = heading + moves.angle + np.pi * moves.turn
@@ -81,9 +81,9 @@ def cut(
     dpt: float,
     shape: Shape,
 ) -> npt.NDArray[np.float32]:
-    """The patches at the positions ``x``, ``y`` and ``heading`` of ``frame``, at
-    DPT ``dpt``, as B × height × width × RGB in [0, 255]. Sampling is bilinear
-    with black outside the frame, as in training."""
+    """The patches at ``x``, ``y`` and ``heading`` of ``frame``, height × width ×
+    RGB, 8 bits, at DPT ``dpt``, as B × height × width × RGB in [0, 255]. Sampling
+    is bilinear with black outside the frame, as in training."""
     sx, sy = sample_points(x, y, heading, dpt, shape, Moves.none(len(x)))
     height, width = frame.shape[:2]
     px, py = sx - 0.5, sy - 0.5

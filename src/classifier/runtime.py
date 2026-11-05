@@ -1,9 +1,7 @@
 """Score a frame's sensors with an ONNX classifier, with no Torch.
 
-A model is an ONNX file and a JSON file with the same stem beside it, holding
-``across_g``, ``along_g``, ``dpt`` and ``threshold``. The ONNX file takes
-``patches``, B × RGB × height × width in [0, 1] with the track along the width,
-and returns B scores in [0, 1]."""
+A model is an ONNX file and the JSON file beside it, as ``classifier.train``
+describes them."""
 
 from __future__ import annotations
 
@@ -56,7 +54,7 @@ class Classifier:
         settings = json.loads(model.with_suffix(".json").read_text())
         self._threshold: float = settings["threshold"]
         self._shape = Shape(settings["across_g"], settings["along_g"], settings["dpt"])
-        self._run = _open(model, engine, device)
+        self._run = _scorer(model, engine, device)
 
     @property
     def threshold(self) -> float:
@@ -89,7 +87,7 @@ class Classifier:
         return results
 
 
-def _open(model: Path, engine: Engine, device: str) -> _Run:
+def _scorer(model: Path, engine: Engine, device: str) -> _Run:
     if engine == "onnxruntime":
         if device != "CPU":
             raise ValueError(f"onnxruntime runs on the CPU, not on {device}")

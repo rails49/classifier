@@ -19,7 +19,6 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
 ## Commands
 
 - `bin/test.sh`: Ruff, Black, Pyright, pytest and `bin/check-wheel.sh`. `bin/install-hooks.sh` runs it before each push. The sandbox blocks OpenVINO's JIT and the process aborts, so run it, and any test that scores on OpenVINO, outside the sandbox.
-- `bin/check-wheel.sh <out>`: builds the wheel into `<out>` and scores a frame with it, installed alone with no extras. Releases: `docs/releasing.md`.
 - `uv run export ~/rails49/r49/archives/iot49/*.r49 --dpt 16`: writes `cache/index.csv`,
   `cache/counts.json` and `cache/dpt16/`. `src/classifier/export.py` describes the output.
 - `uv run train`: trains and scores MobileNetV3-Small in 3 folds from `cache/` and writes

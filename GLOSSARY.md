@@ -1,6 +1,6 @@
 # classifier
 
-The classifier side of [rails49 occupancy](https://github.com/rails49/occupancy): patches are cut from labeled archives, a classifier is trained on them, and `@rails49/classifier` runs it in the browser. Terms this repository uses but does not own are in occupancy's [GLOSSARY.md](https://github.com/rails49/occupancy/blob/main/GLOSSARY.md) and r49's [GLOSSARY.md](https://github.com/rails49/r49/blob/main/GLOSSARY.md).
+The classifier side of [rails49 occupancy](https://github.com/rails49/occupancy): patches are cut from labeled archives, a classifier is trained on them, `rails49-classifier` runs it in Python, and `@rails49/classifier` runs it in the browser. Terms this repository uses but does not own are in occupancy's [GLOSSARY.md](https://github.com/rails49/occupancy/blob/main/GLOSSARY.md) and r49's [GLOSSARY.md](https://github.com/rails49/r49/blob/main/GLOSSARY.md).
 
 ## Language
 

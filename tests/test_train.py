@@ -8,7 +8,7 @@ from PIL import Image
 from torch import nn
 
 from classifier import Classifier, Sensor
-from classifier.patches import Shape
+from classifier.cut import Shape
 from classifier.train import Setup, run
 
 SHAPE = Shape(across_g=2.0, along_g=4.0, dpt=8.0)

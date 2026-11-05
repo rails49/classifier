@@ -9,6 +9,7 @@ import numpy.typing as npt
 import pytest
 from PIL import Image, ImageDraw
 
+from classifier import Classifier, Sensor
 from classifier.cut import Moves, Shape, cut, sample_points
 from classifier.data import Index
 from classifier.patches import Cutter, Jitter
@@ -28,7 +29,11 @@ def shared_frame() -> npt.NDArray[np.uint8]:
     """The frame the shared cases describe."""
     height, width = SHARED["frame"]["height"], SHARED["frame"]["width"]
     rows, cols = np.mgrid[:height, :width]
-    return np.stack([cols, rows, np.full_like(rows, 128)], axis=-1).astype(np.uint8)
+
+    def wave(n: npt.NDArray[np.int64]) -> npt.NDArray[np.int64]:
+        return 5 * np.minimum(n % 102, 102 - n % 102)
+
+    return np.stack([wave(cols), wave(rows), np.full_like(rows, 128)], axis=-1).astype(np.uint8)
 
 
 def cut_one(
@@ -87,14 +92,43 @@ def test_each_patch_pixel_has_the_value_the_shared_case_states(case: dict[str, A
         )
 
 
+@pytest.mark.parametrize("case", SHARED["cases"], ids=ids)
+def test_a_sensor_gets_the_patch_the_shared_case_states_or_none(case: dict[str, Any]):
+    sensor = Sensor("s", **case["sensor"])
+
+    result = Classifier().score(shared_frame(), [sensor], case["dpt"])["s"]
+
+    if case["samples"] is None:
+        assert result.patch is None and result.p_occupied is None
+        return
+    assert result.patch is not None and result.p_occupied is not None
+    for s in case["samples"]:
+        assert result.patch[s["row"], s["col"]] == pytest.approx(
+            s["rgb"], abs=SHARED["tolerance"]["rgb_levels"]
+        )
+
+
+@pytest.mark.parametrize("case", CUT_CASES, ids=ids)
+@pytest.mark.parametrize(("dx", "dy"), [(0.5, 0.0), (0.0, 0.5)])
+def test_the_shared_pixels_catch_a_cut_half_a_pixel_off(case: dict[str, Any], dx: float, dy: float):
+    s = case["sensor"]
+
+    patch = cut_one(shared_frame(), s["x"] + dx, s["y"] + dy, s["heading"], case["dpt"])
+
+    assert any(
+        np.abs(patch[t["row"], t["col"]] - t["rgb"]).max() > SHARED["tolerance"]["rgb_levels"]
+        for t in case["samples"]
+    )
+
+
 @pytest.mark.parametrize("case", CUT_CASES, ids=ids)
 def test_the_numpy_sampler_agrees_with_grid_sample_on_the_shared_cases(case: dict[str, Any]):
     s, frame = case["sensor"], shared_frame()
 
-    ours = cut_one(frame, s["x"], s["y"], s["heading"], case["dpt"])
-    theirs = grid_sampled(frame, s["x"], s["y"], s["heading"], case["dpt"])
+    patch = cut_one(frame, s["x"], s["y"], s["heading"], case["dpt"])
+    in_training = grid_sampled(frame, s["x"], s["y"], s["heading"], case["dpt"])
 
-    assert np.abs(ours - theirs).max() < GRID_SAMPLE_LEVELS
+    assert np.abs(patch - in_training).max() < GRID_SAMPLE_LEVELS
 
 
 @pytest.mark.parametrize("dpt", [14.0, 16.0, 19.5])
@@ -102,9 +136,9 @@ def test_the_numpy_sampler_agrees_with_grid_sample_on_noise_and_at_the_frames_ed
     frame = np.random.default_rng(0).integers(0, 256, (200, 300, 3), dtype=np.uint8)
 
     for x, y, heading in [(150.3, 100.7, 0.7), (3.2, 196.9, -2.1), (299.5, 0.5, 2.9)]:
-        ours = cut_one(frame, x, y, heading, dpt)
-        theirs = grid_sampled(frame, x, y, heading, dpt)
-        assert np.abs(ours - theirs).max() < GRID_SAMPLE_LEVELS
+        patch = cut_one(frame, x, y, heading, dpt)
+        in_training = grid_sampled(frame, x, y, heading, dpt)
+        assert np.abs(patch - in_training).max() < GRID_SAMPLE_LEVELS
 
 
 @pytest.mark.parametrize("dpt", [14.0, 19.5])
