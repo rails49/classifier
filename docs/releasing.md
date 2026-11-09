@@ -37,3 +37,12 @@ PyPI needs a trusted publisher before the first tag. Add a pending publisher at
 The wheel holds one model, in `src/classifier/model/`: an ONNX file and the JSON
 file `uv run train` writes beside it. To change it, replace both files and set
 `MODEL` in `src/classifier/runtime.py`.
+
+A release that changes the model states, in its notes, false clear and false
+occupied at the packaged threshold, with 95% intervals from resampling
+placements. They are counted per (held-out image, position) along all labeled
+track, and given overall, by region and by distance from the image center. The
+goals are false clear ≤ 0.1% and false occupied ≤ 1%. A model that misses them
+can still be released. The notes say that the numbers hold for one layout and
+one set of stock, and that the corpus has too few independent train ends to
+confirm 0.1% false clear.

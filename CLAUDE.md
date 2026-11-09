@@ -2,7 +2,7 @@
 
 The classifier side of [rails49/occupancy](https://github.com/rails49/occupancy):
 patch export, training, the `rails49-classifier` Python package, and the
-`@rails49/classifier` browser package. The plan is rails49/occupancy#272.
+`@rails49/classifier` browser package. The plan is #12.
 
 The classifier sometimes reports a car that is not there, and sometimes misses
 one. Present nothing here as a safety interlock.
