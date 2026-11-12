@@ -1,4 +1,4 @@
-2026-11-04. The brief `hardware-v2.md` answers, moved here unchanged from `~/rails49/HW.md`. `hardware-v2.md` corrects its machine: 32 GB, host `gleis49`, Ubuntu 26.04.1.
+2026-11-04. The brief `hardware-v2.md` answers, moved here unchanged from `~/rails49/HW.md`. `hardware-v2.md` corrects its machine: 32 GB, Ubuntu 26.04.1.
 
 # Classifier figures for hardware selection
 
