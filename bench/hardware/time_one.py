@@ -31,13 +31,17 @@ def ort_call(model: str, threads: int, x: np.ndarray) -> Callable[[], object]:
     return lambda: session.run(None, {"patches": x})
 
 
-def openvino_call(model: str, device: str, threads: int, x: np.ndarray) -> Callable[[], object]:
+def openvino_call(
+    model: str, device: str, threads: int, precision: str | None, x: np.ndarray
+) -> Callable[[], object]:
     import openvino as ov
 
     core = ov.Core()
     network = core.read_model(model)
     network.reshape(list(x.shape))
     config: dict[str, object] = {"PERFORMANCE_HINT": "LATENCY"}
+    if precision is not None:
+        config["INFERENCE_PRECISION_HINT"] = precision
     if device == "CPU":
         config["INFERENCE_NUM_THREADS"] = threads
         config["ENABLE_HYPER_THREADING"] = threads > 6
@@ -53,6 +57,9 @@ def main() -> None:
     parser.add_argument("--batch", type=int, required=True)
     parser.add_argument("--height", type=int, required=True)
     parser.add_argument("--width", type=int, required=True)
+    parser.add_argument(
+        "--precision", choices=["f32", "f16"], help="OpenVINO only; default: the device's"
+    )
     a = parser.parse_args()
 
     shape = (a.batch, 3, a.height, a.width)
@@ -62,7 +69,7 @@ def main() -> None:
     if a.runtime == "ort":
         call = ort_call(a.model, a.threads, x)
     else:
-        call = openvino_call(a.model, a.runtime[3:].upper(), a.threads, x)
+        call = openvino_call(a.model, a.runtime[3:].upper(), a.threads, a.precision, x)
     load_s = time.perf_counter() - start
 
     start = time.perf_counter()
