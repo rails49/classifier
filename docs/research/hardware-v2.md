@@ -30,7 +30,7 @@ For 50 sensors at 2× (compute only, with no capture, decode or patch cutting):
 
 ## Machine
 
-Mac mini 2018 (`Macmini8,1`), Core i7-8700B, 6 cores and 12 threads, 32 GB, UHD 630. Host `gleis49`,
+Mac mini 2018 (`Macmini8,1`), Core i7-8700B, 6 cores and 12 threads, 32 GB, UHD 630.
 Ubuntu 26.04.1 (not 24.04 as the brief says), kernel 7.3.1-2-t2-resolute. Governor `powersave` with
 `balance_performance`, left as installed. `t2fanrd` is not running; the SMC manages the fan.
 

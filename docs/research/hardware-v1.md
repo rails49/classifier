@@ -5,7 +5,7 @@ options can run the MobileNetV3-Small classifier of [#4](https://github.com/rail
 at the rate [rails49/occupancy#272](https://github.com/rails49/occupancy/issues/272) asks for, and which
 to choose. It builds on the detector's hardware and camera notes [R6–R9] and does not repeat them.
 
-The Mac mini `gleis49` is now in use and is not an option here. `hardware-v2.md` measures it. The
+The 2018 Mac mini is now in use and is not an option here. `hardware-v2.md` measures it. The
 recommendation below predates that choice.
 
 Evidence tags: M measured for this note, P published figure, E estimate or arithmetic, with the method
@@ -140,7 +140,7 @@ finished at 18:03 [R11]. Batch of 50 random patches, 5 warm-up runs, median of 5
 
 ## Option 1: USB camera on the box
 
-The box is `gleis49.org`, a Kamrui JK06 on Ubuntu 24.04 [R10]. Read over ssh [M1]: Intel Celeron N5100,
+The box is a Kamrui JK06 on Ubuntu 24.04 [R10]. Read over ssh [M1]: Intel Celeron N5100,
 4 cores, 4 threads, 7.5 GiB RAM, kernel 7.0, one USB 3 root hub at 10 Gb/s and one USB 2 hub, 15
 containers (control, dccex, JMRI, installation), load average 0.00. The CPU flags include SSE4.2 and no
 AVX, AVX2 or FMA.
@@ -397,7 +397,7 @@ rails49 and devices
   <https://github.com/rails49/occupancy/blob/main/docs/adr/0022-the-classifier-joins-the-live-path.md>
 - [M1] The box, read over ssh on 2026-11-03: `lscpu`, `free -h`, `lsusb -t`, `lspci`, `uname -a`,
   `/etc/os-release`, `docker ps`, `uptime`.
-- [M3] Raspberry Pi 4 `classifier49`, 2026-11-03, two minutes after first boot, load average 0.71:
+- [M3] A Raspberry Pi 4, 2026-11-03, two minutes after first boot, load average 0.71:
   `bench_box.py` in a Python venv, same models and settings as [M2].
 - [M2] The box, 2026-11-03, load average 0.13 before the run: `bench_box.py` (median ms for a batch of
   50; onnxruntime CPU at 1, 2 and 4 threads, OpenVINO CPU and GPU with the LATENCY hint) in a
