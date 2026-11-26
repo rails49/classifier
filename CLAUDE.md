@@ -11,7 +11,7 @@ gate: bin/test.sh
 
 ## Where things are
 
-What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/blob/main/docs/adr/0021-each-fact-has-one-owner-and-the-glossary-is-glossary-md.md). See `docs/agents/domain.md`.
+What each kind of doc holds: org [ADR-0025](https://github.com/rails49/.github/blob/main/docs/adr/0025-each-fact-has-one-owner-and-an-adr-is-written-after-its-decision-has-run.md).
 
 - Terms: `GLOSSARY.md`. Decisions: `docs/adr/`. Research notes: `docs/research/`.
 - The `.r49` format is `rails49-r49`'s, pinned to one version (org [ADR-0022](https://github.com/rails49/.github/blob/main/docs/adr/0022-the-r49-format-is-r49s-and-each-consumer-pins-it.md)).
@@ -29,14 +29,12 @@ What each kind of doc holds: org [ADR-0021](https://github.com/rails49/.github/b
 
 ## Agent skills
 
-### Issue tracker
+The rules every rails49 repository shares are the organisation's
+[`docs/agents/`](https://github.com/rails49/.github/tree/main/docs/agents):
+`issue-tracker.md`, `triage-labels.md` and `domain.md`.
 
-Issues live in GitHub Issues on `rails49/classifier`, driven via the `gh` CLI. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-The five canonical triage roles, used verbatim as label strings. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single context: `GLOSSARY.md` and `docs/adr/`. See `docs/agents/domain.md`.
+- Issue tracker: GitHub Issues on rails49/classifier, via the `gh` CLI.
+- Triage labels: `needs-triage`, `needs-info`, `ready-for-agent`,
+  `ready-for-human`, `wontfix`.
+- Domain docs: `GLOSSARY.md` and `docs/adr/`. The terms `GLOSSARY.md` links to
+  are owned by rails49/occupancy and rails49/r49.
